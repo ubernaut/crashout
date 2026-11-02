@@ -23,7 +23,7 @@ export function makeCustomTrack() {
   const motion = u => {
     const speed = (100 + 700 * u ** 0.85) * MPH;
     const gamma = radians(4 + 79 * u ** 1.65);
-    const heading = radians(90 + 185 * smooth(u));
+    const heading = radians(90 + 185 * u ** 3);
     return { speed, gamma, heading, vertical: speed * Math.sin(gamma), horizontal: speed * Math.cos(gamma) };
   };
   let integral = 0;
@@ -35,8 +35,11 @@ export function makeCustomTrack() {
     const u = i / steps, m = motion(u);
     if (i) {
       const midpoint = motion((i - 0.5) / steps), dt = duration / steps;
-      north += midpoint.horizontal * Math.cos(midpoint.heading) * dt;
-      east += midpoint.horizontal * Math.sin(midpoint.heading) * dt;
+      // Use the observed surface wind only near the surface; upper-air winds
+      // are unknown. The vertical taper is a disclosed scenario assumption.
+      const wind = 16 * KT * clamp(1 - height / FT / 10000);
+      north += (midpoint.horizontal * Math.cos(midpoint.heading) + wind * Math.cos(radians(260))) * dt;
+      east += (midpoint.horizontal * Math.sin(midpoint.heading) + wind * Math.sin(radians(260))) * dt;
       height -= midpoint.vertical * dt;
     }
     samples.push({ time: u * duration, north, east, altitudeFt: height / FT, speedMph: m.speed / MPH, speedKt: m.speed / KT, verticalFpm: -m.vertical / FT * 60, heading: degrees(m.heading), pitch: -degrees(m.gamma), bank: 48 * Math.sin(Math.PI * u) ** 1.2, speedKind: 'TAS' });
