@@ -51,15 +51,14 @@ function setPlaying(value) {
   $('play-state').textContent = value ? 'PLAYING' : state.time >= state.track.duration ? 'COMPLETE' : 'PAUSED';
 }
 $('play').onclick = () => setPlaying(!state.playing);
-$('reset').onclick = () => { state.time = 0; setPlaying(false); globe?.recenter(); };
-$('replay').onclick = () => { state.time = 0; globe?.recenter(); setPlaying(true); };
+$('reset').onclick = () => { state.time = 0; setPlaying(false); };
+$('replay').onclick = () => { state.time = 0; setPlaying(true); };
 $('rate').onchange = e => { state.rate = Number(e.target.value); };
 $('timeline').oninput = e => { state.time = Number(e.target.value) * state.track.duration; if (state.time >= state.track.duration) setPlaying(false); };
 document.querySelectorAll('[data-seek]').forEach(button => { button.onclick = () => { state.time = Number(button.dataset.seek) * state.track.duration; if (state.time >= state.track.duration) setPlaying(false); }; });
 $('satellite').onchange = e => { if (globe) globe.imagery.show = e.target.checked; };
 $('weather').onchange = e => { state.weather = e.target.checked; };
 $('motion').onchange = e => { state.motion = e.target.checked; };
-$('recenter').onclick = () => globe?.recenter();
 function switchView() {
   if (!globe) return;
   const overview = globe.toggleOverview();
@@ -80,7 +79,6 @@ $('sound').onclick = async () => {
 window.addEventListener('keydown', e => {
   if (['INPUT', 'SELECT', 'BUTTON', 'TEXTAREA', 'SUMMARY'].includes(document.activeElement.tagName) || $('sources-dialog').open || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.code === 'Space') { e.preventDefault(); setPlaying(!state.playing); }
-  if (e.key.toLowerCase() === 'r') globe?.recenter();
   if (e.key.toLowerCase() === 'v') switchView();
   if (e.key === 'ArrowRight') { e.preventDefault(); state.time = clamp(state.time + 5, 0, state.track.duration); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); state.time = clamp(state.time - 5, 0, state.track.duration); }
@@ -98,7 +96,7 @@ $('profile').onchange = async e => {
     } catch (error) { status(`Published track could not load: ${error.message}`); e.target.value = state.track.id; return; }
   }
   state.track = id === 'recorded' ? recorded : makeCustomTrack(); state.time = 0;
-  globe?.setTrack(state.track); globe?.recenter();
+  globe?.setTrack(state.track);
   $('mode-label').textContent = id === 'recorded' ? 'PUBLISHED ADS-B TRACK' : 'CUSTOM SCENARIO';
   document.querySelector('.telemetry-grid>div>span').textContent = id === 'recorded' ? 'GROUNDSPEED' : 'TRUE AIRSPEED';
   document.querySelector('.speed-tape small').textContent = id === 'recorded' ? 'GS KT' : 'TAS KT';
@@ -179,7 +177,7 @@ function frame(now) {
     $('pfd-mode').textContent = sample.finished ? state.track.endsInImpact ? 'IMPACT' : 'DATA END' : 'DESCENT';
     $('impact-card').hidden = !sample.finished;
     $('impact-detail').textContent = state.track.endsInImpact ? '800 mph · scenario target reached' : `${number(sample.altitudeFt)} ft · ${Math.round(sample.speedKt)} kt groundspeed`;
-    window.__crashout = { ready: true, profile: state.track.id, sample, playing: state.playing, satellite: globe?.imagery.show, overview: globe?.overview, duration: state.track.duration, renderedFrames: globe?.renderedFrames, cameraPitch: globe?.viewer.camera.pitch, renderLoop: globe?.viewer.useDefaultRenderLoop, weatherReady: globe?.weatherStage.ready };
+    window.__crashout = { ready: true, profile: state.track.id, sample, playing: state.playing, satellite: globe?.imagery.show, overview: globe?.overview, duration: state.track.duration, renderedFrames: globe?.renderedFrames, cameraPitch: globe?.viewer.camera.pitch, cameraHeading: globe?.viewer.camera.heading, renderLoop: globe?.viewer.useDefaultRenderLoop, weatherReady: globe?.weatherStage.ready };
   }
   audio.update(sample, state.playing && !$('sources-dialog').open);
   requestAnimationFrame(frame);

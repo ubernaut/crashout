@@ -61,8 +61,10 @@ The smoke check uses system Google Chrome, loads `/docs/`, checks real WebGL and
 satellite tiles, exercises both replay profiles and controls, and checks mobile
 layout. Screenshots stay outside the repository in `/tmp/crashout-qa/`.
 
-Controls: **Space** play/pause, **R** recenter, **V** cockpit/overview,
-**← / →** seek five seconds. Drag the windshield to look around. Audio starts
+Controls: **Space** play/pause, **V** cockpit/overview,
+**← / →** seek five seconds. The cockpit camera stays locked forward to the
+aircraft’s simulated attitude; dragging cannot rotate the scenery independently
+of the cockpit overlay. Audio starts
 only when explicitly enabled. Reduced-motion preference disables turbulence
 motion initially.
 

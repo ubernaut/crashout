@@ -7,8 +7,6 @@ export class CockpitGlobe {
   constructor(element, onStatus) {
     this.onStatus = onStatus;
     this.overview = false;
-    this.yaw = 0;
-    this.lookPitch = 0;
     this.viewer = new C.Viewer(element, {
       animation: false, timeline: false, baseLayer: false, baseLayerPicker: false,
       geocoder: false, homeButton: false, sceneModePicker: false, navigationHelpButton: false,
@@ -67,35 +65,17 @@ export class CockpitGlobe {
     this.path = viewer.entities.add({ polyline: { positions: [], width: 2, material: C.Color.fromCssColorString('#dfb67b').withAlpha(.85) }, show: false });
     this.aircraft = viewer.entities.add({ position: C.Cartesian3.fromDegrees(SITE.lon, SITE.lat, 12000), point: { pixelSize: 9, color: C.Color.fromCssColorString('#f5e0bc'), outlineColor: C.Color.BLACK, outlineWidth: 2 }, show: false });
     this.site = viewer.entities.add({ position: C.Cartesian3.fromDegrees(SITE.lon, SITE.lat, 5), point: { pixelSize: 6, color: C.Color.fromCssColorString('#e6aa68') }, label: { text: 'APPROXIMATE IMPACT AREA', font: '10px monospace', fillColor: C.Color.fromCssColorString('#e6c497'), pixelOffset: new C.Cartesian2(0, -18), style: C.LabelStyle.FILL_AND_OUTLINE, outlineWidth: 3 }, show: false });
-    this.bindLook(viewer.canvas);
     this.ready = new Promise(resolve => {
       const remove = viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => { if (!count) { remove(); resolve(); } });
       setTimeout(resolve, 10000);
     });
   }
-  bindLook(canvas) {
-    canvas.addEventListener('pointerdown', e => {
-      if (e.button !== 0 || this.overview) return;
-      this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
-      canvas.setPointerCapture(e.pointerId);
-    });
-    canvas.addEventListener('pointermove', e => {
-      if (!this.drag || e.pointerId !== this.drag.id) return;
-      this.yaw = C.Math.clamp(this.yaw - (e.clientX - this.drag.x) * .16, -75, 75);
-      this.lookPitch = C.Math.clamp(this.lookPitch + (e.clientY - this.drag.y) * .13, -45, 45);
-      this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
-    });
-    const stop = () => { this.drag = null; };
-    canvas.addEventListener('pointerup', stop);
-    canvas.addEventListener('pointercancel', stop);
-  }
-  recenter() { this.yaw = this.lookPitch = 0; }
   setTrack(track) {
     this.path.polyline.positions = track.samples.map(s => C.Cartesian3.fromDegrees(s.lon, s.lat, s.altitudeFt * FT));
   }
   update(sample, { weather = true, motion = true } = {}) {
     this.time = sample.time;
-    this.seed = sample.heading / 50 + this.yaw / 30;
+    this.seed = sample.heading / 50;
     this.cloudDensity = weather ? sample.weather.cloud * .93 : 0;
     const camera = this.viewer.camera;
     const position = C.Cartesian3.fromDegrees(sample.lon, sample.lat, Math.max(2, sample.altitudeFt * FT + 1.6));
@@ -107,8 +87,8 @@ export class CockpitGlobe {
     } else {
       const shake = weather && motion && !sample.finished ? sample.weather.turbulence : 0;
       camera.setView({ destination: position, orientation: {
-        heading: C.Math.toRadians(sample.heading + this.yaw + shake * .35),
-        pitch: C.Math.toRadians(C.Math.clamp(sample.pitch + this.lookPitch + shake * .6, -89, 85)),
+        heading: C.Math.toRadians(sample.heading + shake * .35),
+        pitch: C.Math.toRadians(C.Math.clamp(sample.pitch + shake * .6, -89, 85)),
         roll: C.Math.toRadians(sample.bank + shake * 1.1)
       } });
     }
@@ -116,7 +96,6 @@ export class CockpitGlobe {
   toggleOverview() {
     this.overview = !this.overview;
     this.path.show = this.aircraft.show = this.site.show = this.overview;
-    this.recenter();
     return this.overview;
   }
   destroy() { this.viewer.destroy(); }
