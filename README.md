@@ -66,6 +66,11 @@ Controls: **Space** play/pause, **R** recenter, **V** cockpit/overview,
 only when explicitly enabled. Reduced-motion preference disables turbulence
 motion initially.
 
+Flight telemetry and Environment start minimized on mobile (760 px or narrower).
+Tap either title bar’s **+ / −** to restore or minimize it independently; desktop
+panels start expanded and offer the same controls. Minimizing preserves weather
+settings and playback. The title bars also work with keyboard Enter or Space.
+
 Cesium transitive packages are pinned to the versions used by the template:
 engine 26.2.0 and widgets 16.1.1. Newer transitive minor releases removed exports
 still expected by Cesium 1.144.0.

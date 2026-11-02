@@ -5,6 +5,18 @@ import { WindshieldWeather, SimulationAudio } from './weather.js';
 import { sources } from './evidence.js';
 
 const $ = id => document.getElementById(id);
+const compactPanels = matchMedia('(max-width: 760px)');
+const panels = [$('telemetry-panel'), $('environment-panel')];
+const setPanelDefaults = () => panels.forEach(panel => { panel.open = !compactPanels.matches; });
+setPanelDefaults();
+compactPanels.addEventListener('change', setPanelDefaults);
+panels.forEach(panel => {
+  const summary = panel.querySelector('summary');
+  const label = panel.id === 'telemetry-panel' ? 'flight telemetry' : 'environment';
+  const updateTitle = () => { summary.title = `${panel.open ? 'Minimize' : 'Restore'} ${label}`; };
+  panel.addEventListener('toggle', updateTitle);
+  updateTitle();
+});
 const number = value => Math.round(value).toLocaleString('en-US');
 const timecode = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const state = { playing: false, time: 0, rate: 1, weather: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, track: makeCustomTrack(), ready: false };
@@ -66,7 +78,7 @@ $('sound').onclick = async () => {
   catch { status('Audio is unavailable in this browser.'); }
 };
 window.addEventListener('keydown', e => {
-  if (['INPUT', 'SELECT', 'BUTTON', 'TEXTAREA'].includes(document.activeElement.tagName) || $('sources-dialog').open || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (['INPUT', 'SELECT', 'BUTTON', 'TEXTAREA', 'SUMMARY'].includes(document.activeElement.tagName) || $('sources-dialog').open || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.code === 'Space') { e.preventDefault(); setPlaying(!state.playing); }
   if (e.key.toLowerCase() === 'r') globe?.recenter();
   if (e.key.toLowerCase() === 'v') switchView();

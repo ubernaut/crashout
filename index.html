@@ -24,22 +24,22 @@
       <div class="windshield-frame" aria-hidden="true"><i class="pillar left"></i><i class="pillar center"></i><i class="pillar right"></i><i class="roof"></i></div>
 
       <div class="view-topline"><span class="live-dot"></span><span id="play-state">PAUSED</span><span class="divider">/</span><span id="mode-label">CUSTOM SCENARIO</span><span class="view-help">Drag to look · R to recenter</span></div>
-      <aside class="flight-card glass">
-        <div class="card-kicker">FLIGHT TELEMETRY <span>SIM</span></div>
+      <details id="telemetry-panel" class="flight-card glass">
+        <summary class="card-kicker">FLIGHT TELEMETRY <span>SIM</span></summary>
         <div class="altitude-number"><strong id="altitude">40,000</strong><span>FT MSL</span></div>
         <div class="altitude-rule"><i id="altitude-bar"></i></div>
         <div class="telemetry-grid"><div><span>TRUE AIRSPEED</span><strong id="speed">100 <small>MPH</small></strong></div><div><span>VERTICAL SPEED</span><strong id="vs">0 <small>FT/MIN</small></strong></div><div><span>HEADING · TRUE</span><strong id="heading">090<small>°</small></strong></div><div><span>OUTSIDE AIR</span><strong id="temperature">−47<small>°C</small></strong></div></div>
         <div id="phase" class="phase-tag">01 / DESCENT ENTRY</div>
-      </aside>
+      </details>
 
-      <aside class="environment glass">
-        <div class="card-kicker">ENVIRONMENT <span>HISTORICAL</span></div>
+      <details id="environment-panel" class="environment glass">
+        <summary class="card-kicker">ENVIRONMENT <span>HISTORICAL</span></summary>
         <div class="weather-title"><svg viewBox="0 0 36 32"><path d="M8 21a7 7 0 1 1 3-13 9 9 0 0 1 17 4 5 5 0 0 1-1 10H8m2 3-2 4m10-4-2 4m10-4-2 4"/></svg><div>Convective weather<small>Reported icing & turbulence</small></div></div>
         <dl><div><dt>SURFACE WIND</dt><dd>080° / 16G28 KT</dd></div><div><dt>CEILING · AGL</dt><dd>OVC 6,000 FT</dd></div><div><dt>VISIBILITY</dt><dd>10 SM · LIGHT RAIN</dd></div></dl>
         <div class="weather-source">KDJT · 17:53Z <span>+4 min after event</span></div>
         <div class="layer-toggles"><label><input id="satellite" type="checkbox" checked><span class="switch"></span>Satellite imagery</label><label><input id="weather" type="checkbox" checked><span class="switch"></span>Weather effects</label><label><input id="motion" type="checkbox" checked><span class="switch"></span>Camera turbulence</label></div>
         <p class="weather-disclosure">Surface observation + reported conditions aloft. Cloud volumes and motion are illustrative.</p>
-      </aside>
+      </details>
 
       <div class="center-reticle" aria-hidden="true"><i></i><span></span><i></i></div>
       <div class="look-buttons"><button id="recenter" title="Recenter view (R)" aria-label="Recenter cockpit view">⌖</button><button id="view-mode" title="Switch cockpit / overview (V)" aria-label="Switch to overview">◈</button><button id="fullscreen" title="Fullscreen" aria-label="Toggle fullscreen">⛶</button></div>
