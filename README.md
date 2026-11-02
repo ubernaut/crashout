@@ -4,20 +4,24 @@ An interactive Palm Beach Learjet 60 cockpit study, adapted from the CesiumJS,
 vanilla JavaScript and Vite patterns in `../exoavdata`. Satellite imagery is on
 by default. The app runs entirely in the browser with no backend or API keys.
 
-The default **custom scenario** begins at 40,000 feet and 100 mph true airspeed,
+The optional **custom scenario** begins at 40,000 feet and 100 mph true airspeed,
 accelerating to 800 mph at an approximate 16-foot MSL ground plane. Its speed,
 flight-path angle, right turn and position are integrated consistently. These
 requested endpoints are not verified accident speeds or a certified flight model.
 
-The **published ADS-B** option uses 30 samples downloaded from Flightradar24,
+The default **published ADS-B** option uses the standard CSV plus granular
+reports downloaded from Flightradar24,
 17:47:46–17:49:23 UTC. After the final sample at 8,750 feet, an explicitly marked
 inferred segment continues to the approximate impact area. Original samples
 are preserved. The tail assumes gravity without drag or lift for vertical motion,
 with a Hermite horizontal curve meeting the last measured ground velocity and
 the approximate site. Its impact time, position and speed are estimates. The
 timeline shades this segment and the cockpit labels it INFERRED FINAL DESCENT.
-Published speeds remain groundspeeds; modeled tail speeds are horizontal
-groundspeeds derived from the continuation, not measured true airspeeds.
+Published speeds remain horizontal groundspeeds and are preserved on the
+navigation display. The main speed readout and graph now show estimated total
+3D motion, combining horizontal groundspeed with barometric vertical speed.
+That derived quantity is not true airspeed. The modeled tail’s total 3D speed
+continues increasing through impact, even as horizontal groundspeed decreases.
 The article states a final time one second earlier than its downloadable CSV.
 Later rows repeat the same altitude, so they are excluded.
 
@@ -44,9 +48,20 @@ cloudless mosaic, not event-time imagery; loading map tiles requires internet.
 EOX noncommercial usage and attribution terms apply. The accident cause remains
 under investigation.
 
+The standard CSV has a 32-second gap from 17:48:07Z to 17:48:39Z. The bundled
+track fills it with granular same-message position/altitude reports, paired with
+the previous speed/track report no more than 1.5 seconds old. Each inserted
+point retains its source velocity timestamp. The finer feed peaks at **35,450 ft
+at 17:48:14.875Z**, then reaches **8,750 ft at 17:49:22.955Z**: **68.08 seconds**.
+It does not measure impact. With this app’s roughly 10.25-second inferred tail,
+first-peak-to-modeled-impact is about **78.37 seconds**. The peak plateau
+continues until **17:48:17.798Z**; timing from its end gives about **75.45 seconds**
+to modeled impact. Neither is a verified accident impact duration. See `timingEvidence` in the bundled track metadata.
+
 ## Recorded radio
 
-The **ATC off / on** button enables real radio audio extracted from the video
+ATC and sound are **on by default** and begin on the first Play click (browser
+autoplay rules require that gesture). The **ATC on / off** button controls real radio audio extracted from the video
 quoted in the [supplied X post](https://x.com/1v100000/status/2117115827682234691),
 originally [posted by I_amMukhtar](https://x.com/I_amMukhtar/status/2117019559676793133).
 No speech is synthesized or altered. The source clip is 116.352 seconds; the
@@ -58,8 +73,7 @@ conversation spacing is retained. The longer ADS-B profile has leading silence;
 the shorter custom profile starts partway through the audio.
 
 Pause, seeking, replay and playback-rate changes apply to the audio too. Audio
-requires an explicit user click; the ATC button is separate from synthetic wind
-sound. Playback pauses at simulated impact. The complete original radio clip
+starts with Play; the ATC button is separate from synthetic wind sound. Playback pauses at simulated impact. The complete original radio clip
 is bundled, including later controller calls, and its provenance is recorded in
 `public/data/radio-source.json`. The recording is not covered by the software’s
 MIT license.
@@ -94,8 +108,7 @@ layout. Screenshots stay outside the repository in `/tmp/crashout-qa/`.
 Controls: **Space** play/pause, **V** cockpit/overview,
 **← / →** seek five seconds. The cockpit camera stays locked forward to the
 aircraft’s simulated attitude; dragging cannot rotate the scenery independently
-of the cockpit overlay. Audio starts
-only when explicitly enabled. Reduced-motion preference disables turbulence
+of the cockpit overlay. ATC and ambient sound start on Play and can be toggled independently. Reduced-motion preference disables turbulence
 motion initially.
 
 Flight telemetry and Environment start minimized on mobile (760 px or narrower).

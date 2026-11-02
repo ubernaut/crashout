@@ -48,8 +48,19 @@ test('recorded replay preserves every source point and marks its continuous exte
   const tail = track.samples.slice(data.samples.length - 1);
   for (let i = 1; i < tail.length; i++) {
     assert.ok(tail[i].altitudeFt < tail[i - 1].altitudeFt);
+    assert.ok(tail[i].motionMph > tail[i - 1].motionMph, 'total 3D speed must keep increasing until ground impact');
+    assert.ok(Math.abs(tail[i].motionMph * MPH - Math.hypot(tail[i].speedMph * MPH, tail[i].verticalFpm * FT / 60)) < 1e-8);
     assert.ok(Number.isFinite(tail[i].pitch)); assert.ok(Number.isFinite(tail[i].heading));
   }
+});
+test('granular onset fills the coarse gap and preserves the measured timing evidence', async () => {
+  const data = JSON.parse(await readFile(new URL('../public/data/recorded-track.json', import.meta.url)));
+  assert.ok(data.samples.filter(s => s.source === 'granular').length > 30);
+  const peak = data.samples.reduce((a, b) => a.altitudeFt >= b.altitudeFt ? a : b);
+  assert.equal(peak.altitudeFt, 35450);
+  assert.equal(peak.utc, '2026-11-01T17:48:14.875183000Z');
+  assert.equal(data.timingEvidence.impactTimeMeasured, false);
+  assert.ok(Math.abs(data.timingEvidence.measuredIntervalSeconds - 68.079828) < .001);
 });
 test('radio aligns impact after the supplied final phrase for both replay durations', async () => {
   const data = JSON.parse(await readFile(new URL('../public/data/recorded-track.json', import.meta.url)));

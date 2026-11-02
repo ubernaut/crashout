@@ -35,7 +35,9 @@ export class WindshieldWeather {
 }
 
 export class SimulationAudio {
-  async toggle() {
+  constructor() { this.enabled = true; }
+  async unlock() {
+    if (!this.enabled) return false;
     if (!this.context) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return false;
@@ -50,13 +52,17 @@ export class SimulationAudio {
       this.noise.connect(this.filter).connect(this.gain).connect(this.context.destination); this.noise.start();
     }
     await this.context.resume();
+    return true;
+  }
+  async toggle() {
     this.enabled = !this.enabled;
-    if (!this.enabled) this.gain.gain.setTargetAtTime(0, this.context.currentTime, .1);
+    if (this.enabled) await this.unlock();
+    else if (this.context) this.gain.gain.setTargetAtTime(0, this.context.currentTime, .1);
     return this.enabled;
   }
   update(sample, playing) {
     if (!this.context || !this.enabled) return;
-    this.gain.gain.setTargetAtTime(playing ? .06 + sample.speedMph / 800 * .25 : 0, this.context.currentTime, .15);
-    this.filter.frequency.setTargetAtTime(350 + sample.speedMph * 2, this.context.currentTime, .1);
+    this.gain.gain.setTargetAtTime(playing ? .03 + sample.motionMph / 800 * .12 : 0, this.context.currentTime, .15);
+    this.filter.frequency.setTargetAtTime(350 + sample.motionMph * 2, this.context.currentTime, .1);
   }
 }

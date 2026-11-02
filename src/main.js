@@ -20,7 +20,13 @@ panels.forEach(panel => {
 });
 const number = value => Math.round(value).toLocaleString('en-US');
 const timecode = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
-const state = { playing: false, time: 0, rate: 1, weather: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, track: makeCustomTrack(), ready: false };
+let recorded;
+try {
+  const response = await fetch(`${import.meta.env.BASE_URL}data/recorded-track.json`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  recorded = makeRecordedTrack(await response.json());
+} catch (error) { status(`Published track could not load: ${error.message}. Custom scenario selected.`); }
+const state = { playing: false, time: 0, rate: 1, weather: true, motion: !matchMedia('(prefers-reduced-motion: reduce)').matches, track: recorded ?? makeCustomTrack(), ready: false };
 const audio = new SimulationAudio();
 const windshield = new WindshieldWeather($('weather-canvas'));
 let globe;
@@ -46,7 +52,7 @@ $('close-sources').onclick = () => $('sources-dialog').close();
 $('sources-dialog').addEventListener('click', e => { if (e.target === $('sources-dialog')) { const r = e.target.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) e.target.close(); } });
 
 function setPlaying(value) {
-  if (value) radio.unlock();
+  if (value) { radio.unlock(); void audio.unlock().catch(() => status('Audio is unavailable in this browser.')); }
   if (value && state.time >= state.track.duration) state.time = 0;
   state.playing = value;
   $('play').ariaLabel = value ? 'Pause descent' : 'Play descent';
@@ -95,7 +101,6 @@ window.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft') { e.preventDefault(); state.time = clamp(state.time - 5, 0, state.track.duration); }
 });
 
-let recorded;
 $('profile').onchange = async e => {
   setPlaying(false);
   const id = e.target.value;
@@ -106,11 +111,15 @@ $('profile').onchange = async e => {
       recorded = makeRecordedTrack(await response.json());
     } catch (error) { status(`Published track could not load: ${error.message}`); e.target.value = state.track.id; return; }
   }
+  selectProfile(id);
+};
+function selectProfile(id) {
   state.track = id === 'recorded' ? recorded : makeCustomTrack(); state.time = 0;
+  $('profile').value = id;
   globe?.setTrack(state.track);
   $('mode-label').textContent = id === 'recorded' ? 'ADS-B + INFERRED IMPACT' : 'CUSTOM SCENARIO';
-  document.querySelector('.telemetry-grid>div>span').textContent = id === 'recorded' ? 'GROUNDSPEED' : 'TRUE AIRSPEED';
-  document.querySelector('.speed-tape small').textContent = id === 'recorded' ? 'GS KT' : 'TAS KT';
+  document.querySelector('.telemetry-grid>div>span').textContent = id === 'recorded' ? '3D SPEED · EST.' : 'TRUE AIRSPEED';
+  document.querySelector('.speed-tape small').textContent = id === 'recorded' ? '3D KT' : 'TAS KT';
   $('provenance-note').textContent = id === 'recorded' ? 'ADS-B · Published track to 8,750 ft; final descent to ground is inferred.' : 'SCENARIO · User-set speed endpoints; inferred path and attitude.';
   document.querySelector('.timeline-markers button:last-child').textContent = 'IMPACT';
   $('impact-card').querySelector('h2').textContent = 'Ground impact';
@@ -118,7 +127,7 @@ $('profile').onchange = async e => {
   $('impact-card').querySelector('.eyebrow').textContent = id === 'recorded' ? 'INFERRED FINAL DESCENT' : 'END OF SCENARIO';
   $('replay').textContent = id === 'recorded' ? '↻ Replay track' : '↻ Replay descent';
   drawChart(); drawNavPath();
-};
+}
 
 function navXY(sample) { return { x: 160 + (sample.lon - SITE.lon) * 470, y: 118 - (sample.lat - SITE.lat) * 470 }; }
 function drawNavPath() {
@@ -138,7 +147,7 @@ function drawChart() {
     ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.stroke();
     if (fill) { ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); const gradient = ctx.createLinearGradient(0, 0, 0, h); gradient.addColorStop(0, '#dfb67b16'); gradient.addColorStop(1, '#dfb67b00'); ctx.fillStyle = gradient; ctx.fill(); }
   };
-  plot('altitudeFt', 40000, '#dfb67b', true); plot('speedMph', 850, '#80acb1');
+  plot('altitudeFt', 40000, '#dfb67b', true); plot(state.track.id === 'recorded' ? 'motionMph' : 'speedMph', 850, '#80acb1');
   if (state.track.hasInferredTail) {
     const x = state.track.recordedDuration / state.track.duration * w;
     ctx.fillStyle = '#db975617'; ctx.fillRect(x, 0, w - x, h);
@@ -147,7 +156,7 @@ function drawChart() {
   }
 }
 new ResizeObserver(drawChart).observe($('chart'));
-drawNavPath();
+selectProfile(state.track.id);
 
 let last = performance.now(), lastUi = 0;
 function frame(now) {
@@ -164,28 +173,28 @@ function frame(now) {
     $('altitude').textContent = number(sample.altitudeFt);
     if (state.track.id === 'recorded') {
       $('mode-label').textContent = sample.inferred ? 'INFERRED FINAL DESCENT' : 'PUBLISHED ADS-B TRACK';
-      document.querySelector('.telemetry-grid>div>span').textContent = sample.inferred ? 'MODELED GROUNDSPEED' : 'GROUNDSPEED';
+      document.querySelector('.telemetry-grid>div>span').textContent = sample.inferred ? 'MODELED 3D SPEED' : '3D SPEED · EST.';
     }
-    $('speed').innerHTML = `${number(sample.speedMph)} <small>MPH</small>`;
+    $('speed').innerHTML = `${number(sample.motionMph)} <small>MPH</small>`;
     $('vs').innerHTML = `${number(sample.verticalFpm)} <small>FT/MIN</small>`;
     $('heading').innerHTML = `${String(Math.round(sample.heading) % 360).padStart(3, '0')}<small>°</small>`;
     $('temperature').innerHTML = `${Math.round(sample.weather.temperatureC)}<small>°C</small>`;
     $('altitude-bar').style.width = `${sample.altitudeFt / 40000 * 100}%`;
     $('phase').textContent = sample.finished ? state.track.endsInImpact ? '04 / GROUND IMPACT' : '04 / LAST RECEIVED SAMPLE' : sample.progress < .2 ? '01 / DESCENT ENTRY' : sample.progress < .55 ? '02 / ACCELERATING DESCENT' : '03 / STEEP DESCENT';
     $('elapsed').textContent = timecode(state.time); $('duration').textContent = timecode(state.track.duration);
-    $('timeline').value = sample.progress; $('timeline').setAttribute('aria-valuetext', `${timecode(state.time)} of ${timecode(state.track.duration)}, ${number(sample.altitudeFt)} feet, ${number(sample.speedMph)} miles per hour`);
+    $('timeline').value = sample.progress; $('timeline').setAttribute('aria-valuetext', `${timecode(state.time)} of ${timecode(state.track.duration)}, ${number(sample.altitudeFt)} feet, ${number(sample.motionMph)} miles per hour`);
     $('playhead').style.left = `${sample.progress * 100}%`;
     $('ice').style.opacity = state.weather ? sample.weather.ice : 0;
     $('attitude-world').style.transform = `rotate(${-sample.bank}deg) translateY(${sample.pitch * 1.1}px)`;
     $('standby-horizon').style.transform = `rotate(${-sample.bank}deg) translateY(${sample.pitch * .3}px)`;
-    $('pfd-speed').textContent = Math.round(sample.speedKt); $('pfd-alt').textContent = Math.round(sample.altitudeFt);
-    const speedTick = Math.round(sample.speedKt / 20) * 20, altTick = Math.round(sample.altitudeFt / 1000) * 1000;
+    $('pfd-speed').textContent = Math.round(sample.motionKt); $('pfd-alt').textContent = Math.round(sample.altitudeFt);
+    const speedTick = Math.round(sample.motionKt / 20) * 20, altTick = Math.round(sample.altitudeFt / 1000) * 1000;
     $('speed-ticks').textContent = `${speedTick + 40}\n${speedTick + 20}\n${speedTick}\n${Math.max(0, speedTick - 20)}\n${Math.max(0, speedTick - 40)}`;
     $('alt-ticks').textContent = `${altTick + 2000}\n${altTick + 1000}\n${altTick}\n${Math.max(0, altTick - 1000)}\n${Math.max(0, altTick - 2000)}`;
     const hdg = `${String(Math.round(sample.heading) % 360).padStart(3, '0')}° T`;
     $('pfd-heading').textContent = hdg; $('nav-heading').textContent = hdg;
     const soundSpeed = Math.sqrt(1.4 * 287.05 * (sample.weather.temperatureC + 273.15));
-    $('mach').textContent = sample.speedKind === 'GS' ? 'GS ONLY' : `M ${(sample.speedMph * .44704 / soundSpeed).toFixed(3)}`;
+    $('mach').textContent = sample.speedKind === 'GS' ? '3D EST' : `M ${(sample.speedMph * .44704 / soundSpeed).toFixed(3)}`;
     const nav = navXY(sample); $('nav-plane').setAttribute('transform', `translate(${nav.x},${nav.y}) rotate(${sample.heading})`);
     const distance = Math.hypot((sample.lat - SITE.lat) * 60, (sample.lon - SITE.lon) * 60 * Math.cos(SITE.lat * Math.PI / 180));
     $('nav-distance').textContent = `SITE ${distance.toFixed(1)} NM`;
@@ -198,7 +207,7 @@ function frame(now) {
     $('pfd-mode').textContent = sample.finished ? state.track.endsInImpact ? 'IMPACT' : 'DATA END' : 'DESCENT';
     $('impact-card').hidden = !sample.finished;
     $('impact-detail').textContent = state.track.id === 'custom' ? '800 mph · scenario target reached' : 'Modeled impact · source data ends at 8,750 ft';
-    window.__crashout = { ready: true, profile: state.track.id, sample, playing: state.playing, satellite: globe?.imagery.show, overview: globe?.overview, duration: state.track.duration, recordedDuration: state.track.recordedDuration, renderedFrames: globe?.renderedFrames, cameraPitch: globe?.viewer.camera.pitch, cameraHeading: globe?.viewer.camera.heading, renderLoop: globe?.viewer.useDefaultRenderLoop, weatherReady: globe?.weatherStage.ready, buildingCount: globe?.buildings.count, buildingsReady: globe?.buildings.rendered, buildingsVisible: globe?.buildings.show, radioEnabled: radio.enabled, radioTime: radio.media.currentTime, radioTarget: radio.target, radioPaused: radio.media.paused, radioRate: radio.media.playbackRate };
+    window.__crashout = { ready: true, profile: state.track.id, sample, playing: state.playing, satellite: globe?.imagery.show, overview: globe?.overview, duration: state.track.duration, recordedDuration: state.track.recordedDuration, renderedFrames: globe?.renderedFrames, cameraPitch: globe?.viewer.camera.pitch, cameraHeading: globe?.viewer.camera.heading, renderLoop: globe?.viewer.useDefaultRenderLoop, weatherReady: globe?.weatherStage.ready, buildingCount: globe?.buildings.count, buildingsReady: globe?.buildings.rendered, buildingsVisible: globe?.buildings.show, radioEnabled: radio.enabled, radioTime: radio.media.currentTime, radioTarget: radio.target, radioPaused: radio.media.paused, radioRate: radio.media.playbackRate, soundEnabled: audio.enabled, soundState: audio.context?.state ?? 'locked' };
   }
   audio.update(sample, state.playing && !$('sources-dialog').open);
   radio.sync(state.time, state.track.duration, state.playing && !$('sources-dialog').open, state.rate);

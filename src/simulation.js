@@ -62,7 +62,8 @@ export function makeRecordedTrack(data, { continueToImpact = true } = {}) {
     const vertical = (after.altitudeFt - before.altitudeFt) * FT / dt;
     const speed = s.groundspeedKt * KT;
     const turn = ((after.heading - before.heading + 540) % 360 - 180) / dt;
-    return { ...s, time: s.timestamp - first, speedKt: s.groundspeedKt, speedMph: speed / MPH, verticalFpm: vertical / FT * 60, pitch: degrees(Math.atan2(vertical, Math.max(1, speed))), bank: clamp(degrees(Math.atan(speed * radians(turn) / 9.80665)), -65, 65), speedKind: 'GS' };
+    const motion = Math.hypot(speed, vertical);
+    return { ...s, time: s.timestamp - first, speedKt: s.groundspeedKt, speedMph: speed / MPH, motionMph: motion / MPH, motionKt: motion / KT, verticalFpm: vertical / FT * 60, pitch: degrees(Math.atan2(vertical, Math.max(1, speed))), bank: clamp(degrees(Math.atan(speed * radians(turn) / 9.80665)), -65, 65), speedKind: 'GS' };
   });
   const recordedDuration = samples.at(-1).time;
   if (continueToImpact) {
@@ -95,7 +96,7 @@ export function makeRecordedTrack(data, { continueToImpact = true } = {}) {
       const down = initialDown + gravity * dt;
       samples.push({ time: recordedDuration + dt, lat: last.lat + north.position / latitudeScale, lon: last.lon + east.position / longitudeScale,
         altitudeFt: last.altitudeFt - (initialDown * dt + .5 * gravity * dt ** 2) / FT,
-        speedKt: horizontal / KT, speedMph: horizontal / MPH, verticalFpm: -down / FT * 60,
+        speedKt: horizontal / KT, speedMph: horizontal / MPH, motionMph: Math.hypot(horizontal, down) / MPH, motionKt: Math.hypot(horizontal, down) / KT, verticalFpm: -down / FT * 60,
         heading: (degrees(Math.atan2(east.velocity, north.velocity)) + 360) % 360,
         pitch: -degrees(Math.atan2(down, Math.max(1, horizontal))), bank: last.bank * (1 - smooth(u)), speedKind: 'GS', inferred: true });
     }
@@ -111,6 +112,8 @@ export function sampleTrack(track, time) {
   const f = clamp((t - a.time) / Math.max(0.0001, b.time - a.time));
   const sample = { time: t, speedKind: a.speedKind };
   for (const key of ['lat', 'lon', 'altitudeFt', 'speedMph', 'speedKt', 'verticalFpm', 'pitch', 'bank']) sample[key] = lerp(a[key], b[key], f);
+  sample.motionMph = lerp(a.motionMph ?? a.speedMph, b.motionMph ?? b.speedMph, f);
+  sample.motionKt = lerp(a.motionKt ?? a.speedKt, b.motionKt ?? b.speedKt, f);
   sample.heading = (a.heading + ((b.heading - a.heading + 540) % 360 - 180) * f + 360) % 360;
   sample.weather = weatherAt(sample.altitudeFt, t);
   sample.progress = t / track.duration;

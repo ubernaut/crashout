@@ -9,7 +9,7 @@ export class RecordedRadio {
     this.media.preload = 'auto';
     this.media.volume = .85;
     this.media.preservesPitch = true;
-    this.enabled = false;
+    this.enabled = true;
     this.pending = false;
     this.media.addEventListener('error', () => onError('Recorded ATC audio could not load.'));
     this.onError = onError;

@@ -15,7 +15,11 @@ try {
   await page.waitForTimeout(2000);
   assert.equal(await page.locator('#render-status').isVisible(), false, await page.locator('#render-status').textContent());
   assert.equal(await page.locator('#satellite').isChecked(), true);
-  assert.equal(await page.locator('#altitude').textContent(), '40,000');
+  assert.equal(await page.locator('#altitude').textContent(), '35,050');
+  assert.equal(await page.locator('#profile').inputValue(), 'recorded');
+  assert.equal(await page.locator('#radio').getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('#sound').getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.evaluate(() => window.__crashout.radioPaused), true);
   assert.equal(await page.locator('#telemetry-panel').getAttribute('open'), '');
   await page.locator('#telemetry-panel summary').focus();
   await page.keyboard.press('Space');
@@ -37,8 +41,11 @@ try {
   assert.ok(Math.abs(cameraAfterDrag.heading - cameraBeforeDrag.heading) < 1e-9, 'dragging must not change cockpit heading');
   await page.locator('#play').click();
   await page.waitForTimeout(500);
-  assert.ok((await page.evaluate(() => window.__crashout.sample.speedMph)) > 100);
+  assert.ok((await page.evaluate(() => window.__crashout.sample.time)) > 0);
+  await page.waitForFunction(() => window.__crashout.soundEnabled && window.__crashout.soundState === 'running');
   await page.locator('#play').click();
+  await page.locator('#profile').selectOption('custom');
+  await page.waitForFunction(() => window.__crashout.profile === 'custom');
   await page.locator('#timeline').evaluate(e => { e.value = '.75'; e.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.waitForFunction(() => window.__crashout.sample.progress >= .749);
   assert.ok((await page.evaluate(() => window.__crashout.cameraPitch)) < cameraBeforeDrag.pitch - .4, 'camera must still follow the aircraft descent');
@@ -54,7 +61,6 @@ try {
   await page.locator('#timeline').evaluate(e => { e.value = '.95'; e.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.waitForFunction(() => window.__crashout.sample.inferred);
   assert.equal(await page.locator('#mode-label').textContent(), 'INFERRED FINAL DESCENT');
-  await page.locator('#radio').click();
   await page.waitForFunction(() => window.__crashout.radioEnabled && Math.abs(window.__crashout.radioTime - window.__crashout.radioTarget) < .15);
   await page.locator('#rate').selectOption('2');
   await page.locator('#play').click();
