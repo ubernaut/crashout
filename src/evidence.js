@@ -1,0 +1,9 @@
+export const sources = [
+  { title: 'Flightradar24 — N722BD incident analysis and downloadable track', url: 'https://www.flightradar24.com/blog/flight-tracking-news/major-incident/learjet-60-crashes-near-west-palm-beach-florida/', detail: 'Primary tracking provider. Aircraft, timing, published ADS-B positions and groundspeeds.' },
+  { title: 'Iowa Environmental Mesonet — archived KDJT METAR observations', url: 'https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station=DJT&data=all&year1=2026&month1=11&day1=1&year2=2026&month2=11&day2=2&tz=Etc%2FUTC&format=onlycomma&latlon=no&elev=no&missing=M&trace=T&direct=no&report_type=3&report_type=4', detail: 'Bundled historical surface observations, including the complete 17:53Z report.' },
+  { title: 'WPTV / CNN — contemporaneous weather and ATC reporting', url: 'https://www.wptv.com/us-news/9-killed-after-a-learjet-crashes-and-erupts-into-flames-in-palm-beach-county-florida', detail: 'Reported icing, −47°C and moderate turbulence; scattered storms in the region.' },
+  { title: 'ABC News — location and FAA account', url: 'https://abcnews.com/US/learjet-9-aboard-crashes-palm-beach-florida-faa/story?id=137753599', detail: 'Military Trail between Cresthaven Boulevard and 10th Avenue. Site pin is approximate.' },
+  { title: 'EOX — Sentinel-2 cloudless satellite mosaic', url: 'https://s2maps.eu/', detail: '2024 mosaic, enabled by default. Contains modified Copernicus Sentinel data. EOX attribution and noncommercial use terms apply.' },
+  { title: 'Bundled weather source data', url: './data/weather-observations.json', detail: 'Raw archived observations used by this build; no current-weather substitution.' },
+  { title: 'Bundled published track excerpt', url: './data/recorded-track.json', detail: 'CSV samples from 17:47:45Z through 17:49:23Z. CSV and article final timestamps differ by one second; repeated altitude rows after the last change are excluded.' }
+];

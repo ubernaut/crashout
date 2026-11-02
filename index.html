@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a1015" />
+  <meta name="description" content="A source-informed cockpit study of the Palm Beach Learjet descent, with satellite imagery and archived weather observations." />
+  <title>CRASHOUT — Palm Beach cockpit study</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%230a1015'/%3E%3Cpath d='M8 28L20 8l12 20-12-6z' fill='%23dfb67b'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Crashout home"><svg viewBox="0 0 32 32"><path d="m5 25 11-20 11 20-11-6z"/></svg> CRASHOUT <span>FLIGHT STUDIES</span></a>
+      <div class="case-heading"><span class="eyebrow">CASE 001 / 01 NOV 2026</span><h1>Palm Beach descent <span>N722BD · LEARJET 60</span></h1></div>
+      <button id="sources-button" class="quiet-button"><span class="book-icon">≡</span> Evidence & sources <span>↗</span></button>
+    </header>
+
+    <main id="flight-view" aria-label="3D cockpit simulation">
+      <div id="globe"></div>
+      <canvas id="weather-canvas" aria-hidden="true"></canvas>
+      <div id="ice" aria-hidden="true"></div>
+      <div class="view-vignette" aria-hidden="true"></div>
+      <div class="windshield-frame" aria-hidden="true"><i class="pillar left"></i><i class="pillar center"></i><i class="pillar right"></i><i class="roof"></i></div>
+
+      <div class="view-topline"><span class="live-dot"></span><span id="play-state">PAUSED</span><span class="divider">/</span><span id="mode-label">CUSTOM SCENARIO</span><span class="view-help">Drag to look · R to recenter</span></div>
+      <aside class="flight-card glass">
+        <div class="card-kicker">FLIGHT TELEMETRY <span>SIM</span></div>
+        <div class="altitude-number"><strong id="altitude">40,000</strong><span>FT MSL</span></div>
+        <div class="altitude-rule"><i id="altitude-bar"></i></div>
+        <div class="telemetry-grid"><div><span>TRUE AIRSPEED</span><strong id="speed">100 <small>MPH</small></strong></div><div><span>VERTICAL SPEED</span><strong id="vs">0 <small>FT/MIN</small></strong></div><div><span>HEADING · TRUE</span><strong id="heading">090<small>°</small></strong></div><div><span>OUTSIDE AIR</span><strong id="temperature">−47<small>°C</small></strong></div></div>
+        <div id="phase" class="phase-tag">01 / DESCENT ENTRY</div>
+      </aside>
+
+      <aside class="environment glass">
+        <div class="card-kicker">ENVIRONMENT <span>HISTORICAL</span></div>
+        <div class="weather-title"><svg viewBox="0 0 36 32"><path d="M8 21a7 7 0 1 1 3-13 9 9 0 0 1 17 4 5 5 0 0 1-1 10H8m2 3-2 4m10-4-2 4m10-4-2 4"/></svg><div>Convective weather<small>Reported icing & turbulence</small></div></div>
+        <dl><div><dt>SURFACE WIND</dt><dd>080° / 16G28 KT</dd></div><div><dt>CEILING · AGL</dt><dd>OVC 6,000 FT</dd></div><div><dt>VISIBILITY</dt><dd>10 SM · LIGHT RAIN</dd></div></dl>
+        <div class="weather-source">KDJT · 17:53Z <span>+4 min after event</span></div>
+        <div class="layer-toggles"><label><input id="satellite" type="checkbox" checked><span class="switch"></span>Satellite imagery</label><label><input id="weather" type="checkbox" checked><span class="switch"></span>Weather effects</label><label><input id="motion" type="checkbox" checked><span class="switch"></span>Camera turbulence</label></div>
+        <p class="weather-disclosure">Surface observation + reported conditions aloft. Cloud volumes and motion are illustrative.</p>
+      </aside>
+
+      <div class="center-reticle" aria-hidden="true"><i></i><span></span><i></i></div>
+      <div class="look-buttons"><button id="recenter" title="Recenter view (R)" aria-label="Recenter cockpit view">⌖</button><button id="view-mode" title="Switch cockpit / overview (V)" aria-label="Switch to overview">◈</button><button id="fullscreen" title="Fullscreen" aria-label="Toggle fullscreen">⛶</button></div>
+
+      <section id="instrument-panel" aria-label="Learjet-inspired instrument panel">
+        <div class="glareshield"><span>LEARJET <b>60</b></span><span class="annunciators"><i id="ice-warning">ICE</i><i id="overspeed-warning">OVERSPEED</i><i id="terrain-warning">TERRAIN</i></span><span>N722BD</span></div>
+        <div class="panel-body">
+          <div class="panel-left"><div class="screw"></div><span class="panel-label">FLIGHT INSTRUMENTS</span><div class="standby"><div id="standby-horizon"></div><span>✛</span></div><span class="panel-label">STANDBY ATTITUDE</span><div class="knob"></div></div>
+          <div class="screen-bezel pfd-bezel"><span class="bezel-label">PRIMARY FLIGHT DISPLAY</span><div class="pfd screen"><div class="pfd-annunciator"><span>SIM</span><span id="pfd-mode">DESCENT</span><span>AP OFF</span></div><div class="attitude-window"><div id="attitude-world"><div class="horizon-line"></div><div class="pitch-lines"><span>20 ───── 20</span><span>10 ─── 10</span><span>−10 ─── −10</span><span>−20 ───── −20</span></div></div></div><div class="bank-markers">\ &nbsp; | &nbsp; /</div><div class="pfd-crosshair">━ ◇ ━</div><div class="speed-tape"><small>TAS KT</small><div id="speed-ticks"></div><strong id="pfd-speed">87</strong></div><div class="alt-tape"><small>FT MSL</small><div id="alt-ticks"></div><strong id="pfd-alt">40000</strong></div><div class="pfd-bottom"><span id="mach">M .151</span><span id="pfd-heading">090° T</span><span>30.06</span></div></div><div class="screen-buttons"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="screen-bezel nav-bezel"><span class="bezel-label">NAVIGATION DISPLAY</span><div class="screen nav-screen"><div class="nav-top"><span id="nav-heading">090° T</span><span>MAP · 20 NM</span></div><svg id="navigation" viewBox="0 0 320 170" aria-label="Illustrative local flight path"><defs><radialGradient id="radar-glow"><stop stop-color="#2a583e" stop-opacity=".35"/><stop offset="1" stop-color="#12281f" stop-opacity="0"/></radialGradient></defs><circle cx="160" cy="125" r="125" fill="url(#radar-glow)"/><g fill="none" stroke="#344b46" stroke-width=".7"><circle cx="160" cy="125" r="42"/><circle cx="160" cy="125" r="84"/><circle cx="160" cy="125" r="124"/><path d="M36 125h248M160 1v165"/></g><path d="M228 5q-8 45 4 79t-6 90" fill="none" stroke="#326e7d" stroke-width="2"/><text x="241" y="75" fill="#5e9da5" font-size="8">ATLANTIC</text><path id="nav-path" fill="none" stroke="#dc99df" stroke-width="1.5"/><circle id="nav-site" r="4" fill="none" stroke="#e8b270"/><text id="nav-site-label" fill="#e8b270" font-size="8">SITE</text><g id="nav-plane"><path d="m0-9 3 7 8 5v2L2 3v5l3 2v1l-5-1-5 1v-1l3-2V3l-9 2V3l8-5z" fill="#f1f4e5"/></g><text x="10" y="163" fill="#71ba9a" font-size="8">SYNTHETIC NAV GEOMETRY</text></svg><div class="nav-bottom"><span id="nav-distance">SITE 8.4 NM</span><span id="nav-gs">GS 87 KT</span></div></div><div class="screen-buttons"><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="engine-bezel"><span class="bezel-label">ENGINE / SYSTEMS</span><div class="engine-screen screen"><span class="engine-title">SIMULATED INDICATIONS</span><div class="engine-pair"><div><small>N1 %</small><strong>89.2</strong><div class="engine-arc"></div></div><div><small>N1 %</small><strong>89.2</strong><div class="engine-arc"></div></div></div><div class="engine-row"><span>ITT °C</span><b>702 &nbsp; 704</b></div><div class="engine-row"><span>OIL PSI</span><b>52 &nbsp;&nbsp; 53</b></div><div class="engine-row"><span>FUEL LB</span><b>2,180</b></div><div class="engine-status">ANTI-ICE <b>STATUS UNKNOWN</b></div></div><div class="panel-label panel-caption">INTERPRETIVE COCKPIT · NOT TYPE-CERTIFIED</div></div>
+          <div class="panel-right"><span class="panel-label">DISPLAY</span><div class="knob"></div><span class="panel-label">BRIGHTNESS</span><div class="screw"></div></div>
+        </div>
+      </section>
+      <div id="impact-card" class="impact-card glass" hidden><span class="eyebrow">END OF SCENARIO</span><h2>Ground impact</h2><p id="impact-detail">800 mph · scenario target reached</p><p>Impact speed and final trajectory are modeled assumptions.</p><button id="replay" class="primary-button">↻ Replay descent</button></div>
+      <div id="loading" class="loading">INITIALIZING SATELLITE VIEW <span></span></div>
+      <div id="render-status" role="status" hidden></div>
+    </main>
+
+    <footer class="playback">
+      <div class="playback-main"><div class="transport"><button id="reset" class="icon-button" aria-label="Restart descent" title="Restart">↶</button><button id="play" class="play-button" aria-label="Play descent"><svg viewBox="0 0 20 20"><path d="m6 3 11 7-11 7z"/></svg></button><div class="timecode"><strong id="elapsed">00:00</strong><span>/ <span id="duration">01:26</span></span></div><select id="rate" aria-label="Playback speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></div><div class="scenario-selector"><span class="eyebrow">REPLAY PROFILE</span><select id="profile" aria-label="Replay profile"><option value="custom">40,000 ft · 100 → 800 mph</option><option value="recorded">Published ADS-B track</option></select></div><div class="timeline-legend"><span><i></i>ALTITUDE</span><span><i></i>SPEED</span></div><button id="sound" class="quiet-button" aria-pressed="false">♫ <span>Sound off</span></button></div>
+      <div class="timeline-wrap"><div class="chart-label">40K FT<br><span>0</span></div><div class="timeline-plot"><canvas id="chart" aria-hidden="true"></canvas><div id="playhead"></div><input id="timeline" type="range" min="0" max="1" step="0.0001" value="0" aria-label="Descent timeline"><div class="timeline-markers"><button data-seek="0">ENTRY</button><button data-seek="0.35">ACCELERATION</button><button data-seek="0.7">STEEP DESCENT</button><button data-seek="1">IMPACT</button></div></div></div>
+      <div class="footer-note"><span><i></i><span id="provenance-note">SCENARIO · User-set speed endpoints; inferred path and attitude.</span></span><span>EXOAVDATA / CESIUMJS <span class="footer-separator">·</span> <kbd>SPACE</kbd> PLAY / PAUSE</span></div>
+    </footer>
+  </div>
+
+  <dialog id="sources-dialog"><div class="dialog-heading"><span class="eyebrow">EVIDENCE & METHODOLOGY</span><button id="close-sources" aria-label="Close evidence">×</button></div><h2>A study with visible assumptions.</h2><p>This app depicts the 1 November 2026 Learjet 60 N722BD accident near Greenacres in Palm Beach County. The investigation is ongoing. It does not establish the accident’s cause.</p><div class="evidence-columns"><section><h3>Documented observations</h3><p>Flightradar24 reports a right-hand descent and a final received altitude of 8,750 ft at 17:49:22 UTC; vertical rate exceeded 32,000 ft/min. The crew reported icing, turbulence and precipitation.</p><p>The nearby airport’s archived <b>KDJT 17:53Z</b> METAR reports <b>08016G28KT, 10SM, −RA, SCT026 SCT050 OVC060, 26/23, A3006</b>. It was issued four minutes after the reported crash minute; surface conditions do not measure conditions along the jet’s path.</p><p>ATC reporting reviewed by CNN/WPTV describes −47°C and moderate turbulence with altitude deviations up to 700 ft.</p></section><section><h3>What this app models</h3><p>The default profile starts at <b>40,000 ft / 100 mph</b> and reaches <b>800 mph at ground impact</b>, as requested. These are custom scenario endpoints, not verified accident speeds. Speed means modeled true airspeed. The path is integrated from that speed and flight-path angle.</p><p>The published-track option uses downloaded ADS-B positions, barometric altitude and <b>groundspeed</b>. It stops at the last received point. Pitch is inferred from motion; bank is illustrative. Flight levels are visualized as approximate MSL heights.</p><p>Cloud density, vertical extent, icing appearance, visibility inside clouds and turbulence motion are illustrative. Engine indications, controls and avionics layout are decorative. No flight-recorder attitude, upper-air wind profile or authenticated cockpit reconstruction is available here. Satellite imagery is a cloud-free 2024 mosaic, not event-time photography.</p></section></div><h3>Sources</h3><ol id="source-list"></ol><p class="dialog-footnote">Built from ExoAVData’s Cesium camera and static-build patterns. Cockpit graphics are original, inspired by Learjet-era EFIS. Source observations are bundled; no live weather replaces the historical scene.</p></dialog>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
