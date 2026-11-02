@@ -1,0 +1,12 @@
+{
+  "requestedPost": "https://x.com/1v100000/status/2117115827682234691",
+  "quotedMediaPost": "https://x.com/I_amMukhtar/status/2117019559676793133",
+  "mediaSource": "https://video.twimg.com/amplify_video/2117019378185117696/vid/avc1/740x720/1pUihUn5JfALefZ7.mp4?tag=29",
+  "asset": "../media/n722bd-atc.m4a",
+  "description": "Audio extracted from the quoted public video. Original conversation and timing retained; no synthesized speech.",
+  "sourceDurationSeconds": 116.352,
+  "finalPhraseEndSecondsApprox": 105.30,
+  "impactAfterPhraseSeconds": 0.35,
+  "alignment": "Editorial synchronization to the final phrase identified by the user. Estimated phrase boundary checked with timestamped speech recognition. No verified UTC anchor or authenticated full ATC timeline. Each profile maps its simulated impact to source audio 105.65s. Negative source time is silence. Playback stops at impact; the complete source clip is bundled.",
+  "rights": "Source radio recording and post attribution retained. Not covered by the app's MIT software license."
+}

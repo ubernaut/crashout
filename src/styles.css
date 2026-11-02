@@ -10,5 +10,8 @@
 .flight-card>summary::after,.environment>summary::after{content:'+';font:18px var(--mono);color:var(--amber);margin-left:auto;line-height:1}
 .flight-card[open]>summary::after,.environment[open]>summary::after{content:'−'}
 .flight-card>summary:focus-visible,.environment>summary:focus-visible{outline:2px solid var(--amber);outline-offset:5px;border-radius:2px}
+#flight-view{-webkit-user-select:none;user-select:none}
+.map-attribution{position:absolute;right:15px;bottom:calc(32% + 10px);z-index:9;font:8px var(--mono);color:#d8e1e0;text-shadow:0 1px 3px #000;background:#101b227a;padding:4px 6px;border-radius:2px}.map-attribution a{color:inherit;text-decoration:none}.map-attribution a:hover{text-decoration:underline}.overview .map-attribution{bottom:10px}#radio[aria-pressed=true]{color:var(--amber)}
 @media(max-width:760px){.flight-card>summary,.environment>summary{min-height:20px}.flight-card:not([open]),.environment:not([open]){padding-top:12px;padding-bottom:12px}}
+@media(max-width:760px){.map-attribution{bottom:calc(30% + 12px);font-size:6px;max-width:225px;text-align:right}#radio{margin-left:auto}.playback-main{column-gap:8px}.environment[open]{max-height:calc(70% - 58px);overflow-y:auto}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.loading span{animation:none}}

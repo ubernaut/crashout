@@ -1,0 +1,11 @@
+Building footprint data: © OpenStreetMap contributors.
+Database licensed under Open Data Commons Open Database License (ODbL) 1.0:
+https://opendatacommons.org/licenses/odbl/1-0/
+https://www.openstreetmap.org/copyright
+
+The accompanying buildings.json is a derived, partial extract of current OSM
+closed building ways, distributed under ODbL 1.0. Source URL, retrieval time,
+original response SHA-256 and individual OSM way IDs are in that file.
+Height defaults and floor-count conversions are application assumptions and
+are identified per building. This data license is separate from the app's
+MIT software license. The file is the preferred editable form of this extract.

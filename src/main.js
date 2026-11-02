@@ -3,6 +3,7 @@ import { makeCustomTrack, makeRecordedTrack, sampleTrack, clamp, SITE } from './
 import { CockpitGlobe } from './globe.js';
 import { WindshieldWeather, SimulationAudio } from './weather.js';
 import { sources } from './evidence.js';
+import { RecordedRadio } from './radio.js';
 
 const $ = id => document.getElementById(id);
 const compactPanels = matchMedia('(max-width: 760px)');
@@ -24,6 +25,7 @@ const audio = new SimulationAudio();
 const windshield = new WindshieldWeather($('weather-canvas'));
 let globe;
 function status(message) { $('render-status').hidden = false; $('render-status').textContent = message; }
+const radio = new RecordedRadio(status);
 try {
   globe = new CockpitGlobe($('globe'), status);
   globe.setTrack(state.track);
@@ -44,6 +46,7 @@ $('close-sources').onclick = () => $('sources-dialog').close();
 $('sources-dialog').addEventListener('click', e => { if (e.target === $('sources-dialog')) { const r = e.target.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) e.target.close(); } });
 
 function setPlaying(value) {
+  if (value) radio.unlock();
   if (value && state.time >= state.track.duration) state.time = 0;
   state.playing = value;
   $('play').ariaLabel = value ? 'Pause descent' : 'Play descent';
@@ -59,6 +62,7 @@ document.querySelectorAll('[data-seek]').forEach(button => { button.onclick = ()
 $('satellite').onchange = e => { if (globe) globe.imagery.show = e.target.checked; };
 $('weather').onchange = e => { state.weather = e.target.checked; };
 $('motion').onchange = e => { state.motion = e.target.checked; };
+$('buildings').onchange = e => { if (globe) globe.buildings.show = e.target.checked; };
 function switchView() {
   if (!globe) return;
   const overview = globe.toggleOverview();
@@ -75,6 +79,13 @@ $('fullscreen').onclick = async () => {
 $('sound').onclick = async () => {
   try { const enabled = await audio.toggle(); $('sound').ariaPressed = String(enabled); $('sound').querySelector('span').textContent = enabled ? 'Sound on' : 'Sound off'; }
   catch { status('Audio is unavailable in this browser.'); }
+};
+$('radio').onclick = () => {
+  const enabled = radio.toggle();
+  radio.blocked = false;
+  $('radio').ariaPressed = String(enabled);
+  $('radio').querySelector('span').textContent = enabled ? 'ATC on' : 'ATC off';
+  if (enabled) radio.unlock();
 };
 window.addEventListener('keydown', e => {
   if (['INPUT', 'SELECT', 'BUTTON', 'TEXTAREA', 'SUMMARY'].includes(document.activeElement.tagName) || $('sources-dialog').open || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -97,14 +108,14 @@ $('profile').onchange = async e => {
   }
   state.track = id === 'recorded' ? recorded : makeCustomTrack(); state.time = 0;
   globe?.setTrack(state.track);
-  $('mode-label').textContent = id === 'recorded' ? 'PUBLISHED ADS-B TRACK' : 'CUSTOM SCENARIO';
+  $('mode-label').textContent = id === 'recorded' ? 'ADS-B + INFERRED IMPACT' : 'CUSTOM SCENARIO';
   document.querySelector('.telemetry-grid>div>span').textContent = id === 'recorded' ? 'GROUNDSPEED' : 'TRUE AIRSPEED';
   document.querySelector('.speed-tape small').textContent = id === 'recorded' ? 'GS KT' : 'TAS KT';
-  $('provenance-note').textContent = id === 'recorded' ? 'ADS-B · Published positions & groundspeed; attitude inferred. Ends at 8,750 ft.' : 'SCENARIO · User-set speed endpoints; inferred path and attitude.';
-  document.querySelector('.timeline-markers button:last-child').textContent = id === 'recorded' ? 'LAST SAMPLE' : 'IMPACT';
-  $('impact-card').querySelector('h2').textContent = id === 'recorded' ? 'End of received data' : 'Ground impact';
-  $('impact-card').querySelector('p:last-of-type').textContent = id === 'recorded' ? 'The replay stops here. The final impact is not in this published track.' : 'Impact speed and final trajectory are modeled assumptions.';
-  $('impact-card').querySelector('.eyebrow').textContent = id === 'recorded' ? 'PUBLISHED TRACK ENDS' : 'END OF SCENARIO';
+  $('provenance-note').textContent = id === 'recorded' ? 'ADS-B · Published track to 8,750 ft; final descent to ground is inferred.' : 'SCENARIO · User-set speed endpoints; inferred path and attitude.';
+  document.querySelector('.timeline-markers button:last-child').textContent = 'IMPACT';
+  $('impact-card').querySelector('h2').textContent = 'Ground impact';
+  $('impact-card').querySelector('p:last-of-type').textContent = id === 'recorded' ? 'The segment below 8,750 ft is inferred. Audio alignment is an editorial approximation.' : 'Impact speed and final trajectory are modeled assumptions.';
+  $('impact-card').querySelector('.eyebrow').textContent = id === 'recorded' ? 'INFERRED FINAL DESCENT' : 'END OF SCENARIO';
   $('replay').textContent = id === 'recorded' ? '↻ Replay track' : '↻ Replay descent';
   drawChart(); drawNavPath();
 };
@@ -128,13 +139,19 @@ function drawChart() {
     if (fill) { ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath(); const gradient = ctx.createLinearGradient(0, 0, 0, h); gradient.addColorStop(0, '#dfb67b16'); gradient.addColorStop(1, '#dfb67b00'); ctx.fillStyle = gradient; ctx.fill(); }
   };
   plot('altitudeFt', 40000, '#dfb67b', true); plot('speedMph', 850, '#80acb1');
+  if (state.track.hasInferredTail) {
+    const x = state.track.recordedDuration / state.track.duration * w;
+    ctx.fillStyle = '#db975617'; ctx.fillRect(x, 0, w - x, h);
+    ctx.strokeStyle = '#e2aa6c'; ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle = '#dfb67b'; ctx.font = '7px monospace'; ctx.fillText('INFERRED', Math.min(x + 4, w - 46), 9);
+  }
 }
 new ResizeObserver(drawChart).observe($('chart'));
 drawNavPath();
 
 let last = performance.now(), lastUi = 0;
 function frame(now) {
-  const dt = Math.min(.1, Math.max(0, (now - last) / 1000)); last = now;
+  const dt = Math.min(1, Math.max(0, (now - last) / 1000)); last = now;
   if (state.playing && !$('sources-dialog').open) {
     state.time = Math.min(state.track.duration, state.time + dt * state.rate);
     if (state.time >= state.track.duration) setPlaying(false);
@@ -145,6 +162,10 @@ function frame(now) {
     globe?.update(sample, state);
     windshield.draw(sample, state.weather);
     $('altitude').textContent = number(sample.altitudeFt);
+    if (state.track.id === 'recorded') {
+      $('mode-label').textContent = sample.inferred ? 'INFERRED FINAL DESCENT' : 'PUBLISHED ADS-B TRACK';
+      document.querySelector('.telemetry-grid>div>span').textContent = sample.inferred ? 'MODELED GROUNDSPEED' : 'GROUNDSPEED';
+    }
     $('speed').innerHTML = `${number(sample.speedMph)} <small>MPH</small>`;
     $('vs').innerHTML = `${number(sample.verticalFpm)} <small>FT/MIN</small>`;
     $('heading').innerHTML = `${String(Math.round(sample.heading) % 360).padStart(3, '0')}<small>°</small>`;
@@ -176,11 +197,12 @@ function frame(now) {
     $('terrain-warning').classList.toggle('danger', sample.altitudeFt < 2500);
     $('pfd-mode').textContent = sample.finished ? state.track.endsInImpact ? 'IMPACT' : 'DATA END' : 'DESCENT';
     $('impact-card').hidden = !sample.finished;
-    $('impact-detail').textContent = state.track.endsInImpact ? '800 mph · scenario target reached' : `${number(sample.altitudeFt)} ft · ${Math.round(sample.speedKt)} kt groundspeed`;
-    window.__crashout = { ready: true, profile: state.track.id, sample, playing: state.playing, satellite: globe?.imagery.show, overview: globe?.overview, duration: state.track.duration, renderedFrames: globe?.renderedFrames, cameraPitch: globe?.viewer.camera.pitch, cameraHeading: globe?.viewer.camera.heading, renderLoop: globe?.viewer.useDefaultRenderLoop, weatherReady: globe?.weatherStage.ready };
+    $('impact-detail').textContent = state.track.id === 'custom' ? '800 mph · scenario target reached' : 'Modeled impact · source data ends at 8,750 ft';
+    window.__crashout = { ready: true, profile: state.track.id, sample, playing: state.playing, satellite: globe?.imagery.show, overview: globe?.overview, duration: state.track.duration, recordedDuration: state.track.recordedDuration, renderedFrames: globe?.renderedFrames, cameraPitch: globe?.viewer.camera.pitch, cameraHeading: globe?.viewer.camera.heading, renderLoop: globe?.viewer.useDefaultRenderLoop, weatherReady: globe?.weatherStage.ready, buildingCount: globe?.buildings.count, buildingsReady: globe?.buildings.rendered, buildingsVisible: globe?.buildings.show, radioEnabled: radio.enabled, radioTime: radio.media.currentTime, radioTarget: radio.target, radioPaused: radio.media.paused, radioRate: radio.media.playbackRate };
   }
   audio.update(sample, state.playing && !$('sources-dialog').open);
+  radio.sync(state.time, state.track.duration, state.playing && !$('sources-dialog').open, state.rate);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-window.addEventListener('pagehide', () => { setPlaying(false); });
+window.addEventListener('pagehide', () => { setPlaying(false); radio.media.pause(); });

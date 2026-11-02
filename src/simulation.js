@@ -54,7 +54,7 @@ export function makeCustomTrack() {
   last.speedMph = 800;
   return { id: 'custom', duration, samples, endsInImpact: true };
 }
-export function makeRecordedTrack(data) {
+export function makeRecordedTrack(data, { continueToImpact = true } = {}) {
   const first = data.samples[0].timestamp;
   const samples = data.samples.map((s, i, a) => {
     const before = a[Math.max(0, i - 1)], after = a[Math.min(a.length - 1, i + 1)];
@@ -64,7 +64,44 @@ export function makeRecordedTrack(data) {
     const turn = ((after.heading - before.heading + 540) % 360 - 180) / dt;
     return { ...s, time: s.timestamp - first, speedKt: s.groundspeedKt, speedMph: speed / MPH, verticalFpm: vertical / FT * 60, pitch: degrees(Math.atan2(vertical, Math.max(1, speed))), bank: clamp(degrees(Math.atan(speed * radians(turn) / 9.80665)), -65, 65), speedKind: 'GS' };
   });
-  return { id: 'recorded', duration: samples.at(-1).time, samples, endsInImpact: false };
+  const recordedDuration = samples.at(-1).time;
+  if (continueToImpact) {
+    const last = samples.at(-1);
+    const drop = (last.altitudeFt - SITE.altitudeFt) * FT;
+    const initialDown = Math.max(1, -last.verticalFpm * FT / 60);
+    const gravity = 9.80665;
+    const tailDuration = (Math.sqrt(initialDown ** 2 + 2 * gravity * drop) - initialDown) / gravity;
+    const latitudeScale = 6378137 * Math.PI / 180;
+    const longitudeScale = latitudeScale * Math.cos(radians(SITE.lat));
+    const targetEast = (SITE.lon - last.lon) * longitudeScale;
+    const targetNorth = (SITE.lat - last.lat) * latitudeScale;
+    const startEastVelocity = last.speedKt * KT * Math.sin(radians(last.heading));
+    const startNorthVelocity = last.speedKt * KT * Math.cos(radians(last.heading));
+    const endEastVelocity = 15 * Math.sin(radians(275));
+    const endNorthVelocity = 15 * Math.cos(radians(275));
+    // Hermite horizontal continuation meets the observed velocity and an
+    // approximate site. Vertical motion assumes gravity, without drag/lift.
+    // This entire tail is inferred; the original samples stay untouched.
+    const hermite = (u, target, v0, v1) => ({
+      position: (-2 * u ** 3 + 3 * u ** 2) * target + (u ** 3 - 2 * u ** 2 + u) * tailDuration * v0 + (u ** 3 - u ** 2) * tailDuration * v1,
+      velocity: (-6 * u ** 2 + 6 * u) / tailDuration * target + (3 * u ** 2 - 4 * u + 1) * v0 + (3 * u ** 2 - 2 * u) * v1
+    });
+    const steps = Math.ceil(tailDuration * 20);
+    for (let i = 1; i <= steps; i++) {
+      const u = i / steps, dt = u * tailDuration;
+      const east = hermite(u, targetEast, startEastVelocity, endEastVelocity);
+      const north = hermite(u, targetNorth, startNorthVelocity, endNorthVelocity);
+      const horizontal = Math.hypot(east.velocity, north.velocity);
+      const down = initialDown + gravity * dt;
+      samples.push({ time: recordedDuration + dt, lat: last.lat + north.position / latitudeScale, lon: last.lon + east.position / longitudeScale,
+        altitudeFt: last.altitudeFt - (initialDown * dt + .5 * gravity * dt ** 2) / FT,
+        speedKt: horizontal / KT, speedMph: horizontal / MPH, verticalFpm: -down / FT * 60,
+        heading: (degrees(Math.atan2(east.velocity, north.velocity)) + 360) % 360,
+        pitch: -degrees(Math.atan2(down, Math.max(1, horizontal))), bank: last.bank * (1 - smooth(u)), speedKind: 'GS', inferred: true });
+    }
+    Object.assign(samples.at(-1), { lat: SITE.lat, lon: SITE.lon, altitudeFt: SITE.altitudeFt });
+  }
+  return { id: 'recorded', duration: samples.at(-1).time, recordedDuration, samples, endsInImpact: continueToImpact, hasInferredTail: continueToImpact };
 }
 export function sampleTrack(track, time) {
   const t = clamp(time, 0, track.duration);
@@ -79,5 +116,6 @@ export function sampleTrack(track, time) {
   sample.progress = t / track.duration;
   sample.finished = t >= track.duration;
   sample.impacted = sample.finished && track.endsInImpact;
+  sample.inferred = Boolean(track.hasInferredTail && t > track.recordedDuration);
   return sample;
 }

@@ -2,6 +2,7 @@
 // explicit camera ownership, bounded render resolution and satellite mosaic.
 import * as C from 'cesium';
 import { FT, SITE } from './simulation.js';
+import { LocalBuildings } from './buildings.js';
 
 export class CockpitGlobe {
   constructor(element, onStatus) {
@@ -39,6 +40,9 @@ export class CockpitGlobe {
       credit: new C.Credit('<a href="https://s2maps.eu/" target="_blank" rel="noopener">Sentinel-2 cloudless © EOX · modified Copernicus Sentinel data 2024</a>')
     });
     this.imagery = viewer.imageryLayers.addImageryProvider(provider);
+    viewer.scene.globe.depthTestAgainstTerrain = true;
+    this.buildings = new LocalBuildings(viewer);
+    this.buildings.ready.catch(error => onStatus(`3D buildings could not load: ${error.message}. Satellite imagery and replay remain available.`));
     provider.errorEvent.addEventListener(() => onStatus('Satellite tiles are unavailable. Check your connection; the scenario and instruments continue.'));
     viewer.scene.renderError.addEventListener((scene, error) => onStatus(`3D rendering stopped: ${error.message}. Reload with WebGL enabled.`));
     this.weatherStage = viewer.scene.postProcessStages.add(new C.PostProcessStage({
